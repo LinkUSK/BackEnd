@@ -1,4 +1,3 @@
-// src/main/java/com/example/demo/config/SecurityConfig.java
 package com.example.demo.config;
 
 import com.example.demo.security.JwtAuthenticationFilter;
@@ -21,44 +20,43 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
-                // CORS 기본값
+                // 🔥 반드시 있어야 CORS 설정이 CorsConfig에서 읽힘
                 .cors(Customizer.withDefaults())
 
-                // CSRF: WebSocket + API + 파일 경로는 예외
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/ws/**", "/api/**", "/files/**"))
+                // CSRF는 REST API에서 비활성화
+                .csrf(csrf -> csrf.disable())
 
                 .authorizeHttpRequests(auth -> auth
-                        // 웹소켓은 모두 허용
+
+                        // WebSocket 허용
                         .requestMatchers("/ws/**").permitAll()
 
-                        // 로그인 / 회원가입 / 이메일 인증 등의 auth API
+                        // 인증(Login/Signup 등)은 모두 허용
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // 🔹 AI 관련 API는 모두 허용 (태그 추천 등)
+                        // AI 추천 태그 등도 허용
                         .requestMatchers("/api/ai/**").permitAll()
 
-                        // CORS preflight(OPTIONS)는 전역 허용
+                        // CORS Preflight(OPTIONS) 요청을 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🔹 메타 정보(카테고리/태그) 조회는 모두 허용
-                        //    - GET /api/meta/categories
-                        //    - GET /api/meta/tags?category=...
+                        // meta 정보는 모두 허용
                         .requestMatchers(HttpMethod.GET, "/api/meta/**").permitAll()
 
-                        // 🔹 회원가입 단계에서 사용하는 "비로그인" 파일 업로드 허용
+                        // 회원가입 중 public upload 허용
                         .requestMatchers(HttpMethod.POST, "/api/files/upload-public").permitAll()
 
-                        // 🔹 업로드된 파일 조회(GET)는 모두 허용
+                        // 업로드 파일 조회
                         .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
 
-                        // 그 외 나머지 요청은 JWT 인증 필요
+                        // 나머지 모든 API → JWT 필요
                         .anyRequest().authenticated()
                 )
 
-                // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 추가
+                // JWT 필터 적용
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
