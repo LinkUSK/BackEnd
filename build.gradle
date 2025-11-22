@@ -25,10 +25,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-    // ✅ 로컬 개발용 MySQL 드라이버
+    // 로컬: MySQL
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // ✅ Render 배포용 PostgreSQL 드라이버
+    // 배포: PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
 
     // Lombok
