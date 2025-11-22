@@ -66,9 +66,10 @@ public class TalentPostService {
             if (!t.isActive()) {
                 throw new IllegalArgumentException("비활성화된 태그가 포함되어 있습니다: " + t.getName());
             }
-            if (t.getCategory() != category) {
-                throw new IllegalArgumentException("카테고리와 태그의 카테고리가 일치하지 않습니다. (" + t.getName() + ")");
-            }
+            // ❌ 기존: 카테고리 enum 비교하던 부분 제거
+            // if (t.getCategory() != category) {
+            //     throw new IllegalArgumentException("카테고리와 태그의 카테고리가 일치하지 않습니다. (" + t.getName() + ")");
+            // }
         }
         Map<Long, Tag> map = found.stream()
                 .collect(Collectors.toMap(
