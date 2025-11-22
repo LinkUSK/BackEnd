@@ -38,4 +38,5 @@ out/
 
 
 # 민감 정보가 포함된 설정 파일 Git 추적에서 제외
-src/main/resources/application-secret.properties
+src/main/resources/application-prod-secret.properties
+src/main/resources/application-test-secret.properties
