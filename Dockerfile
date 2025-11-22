@@ -1,25 +1,28 @@
-# ========= 1단계: Gradle로 빌드 =========
-FROM gradle:8.10-jdk21 AS build
-
-# 작업 디렉토리
-WORKDIR /home/gradle/project
-
-# 현재 프로젝트 전체 복사
-COPY --chown=gradle:gradle . .
-
-# Spring Boot 실행용 JAR 만들기
-RUN ./gradlew bootJar --no-daemon
-
-# ========= 2단계: 실행용 이미지 =========
-FROM eclipse-temurin:21-jre
+# 1) 빌드 스테이지
+FROM eclipse-temurin:21-jdk-jammy AS build
 
 WORKDIR /app
 
-# 위에서 빌드된 jar를 app.jar 이름으로 복사
-COPY --from=build /home/gradle/project/build/libs/*.jar app.jar
+# gradle 관련 파일, 소스 복사
+COPY gradlew ./
+COPY gradle gradle
+COPY build.gradle settings.gradle ./
+COPY src src
 
-# 컨테이너 내부 포트
+# 윈도우 CRLF 줄바꿈을 LF로 변환 + 실행 권한 부여
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
+
+# jar 빌드
+RUN ./gradlew bootJar --no-daemon
+
+# 2) 실행 스테이지
+FROM eclipse-temurin:21-jdk-jammy
+
+WORKDIR /app
+
+# 빌드 스테이지에서 만든 jar만 가져오기
+COPY --from=build /app/build/libs/*.jar app.jar
+
 EXPOSE 8080
 
-# Render에서는 환경변수로 SPRING_PROFILES_ACTIVE=prod 를 줄 예정
 ENTRYPOINT ["java", "-jar", "app.jar"]
