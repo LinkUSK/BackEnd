@@ -1,40 +1,64 @@
+// src/main/java/com/example/demo/service/FileStorageService.java
 package com.example.demo.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.io.IOException;
-import java.nio.file.*;
-import java.util.UUID;
+import java.util.Map;
 
+/**
+ * 이미지 파일을 Cloudinary에 업로드하고,
+ * 업로드된 파일의 HTTPS URL(secure_url)을 반환하는 서비스.
+ */
 @Service
 public class FileStorageService {
 
-    private final Path uploadDir;
+    private final Cloudinary cloudinary;
 
-    public FileStorageService(@Value("${app.upload.dir:uploads}") String dir) throws IOException {
-        this.uploadDir = Paths.get(dir).toAbsolutePath().normalize();
-        Files.createDirectories(this.uploadDir);
+    public FileStorageService(
+            @Value("${cloudinary.cloud-name}") String cloudName,
+            @Value("${cloudinary.api-key}") String apiKey,
+            @Value("${cloudinary.api-secret}") String apiSecret
+    ) {
+        this.cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", cloudName,
+                "api_key", apiKey,
+                "api_secret", apiSecret
+        ));
     }
 
+    /**
+     * 이미지를 Cloudinary에 업로드하고, HTTPS URL을 반환한다.
+     *
+     * @param file 업로드할 이미지 파일
+     * @return 업로드된 이미지의 secure_url (예: https://res.cloudinary.com/...)
+     */
     public String saveImage(MultipartFile file) {
-        if (file.isEmpty()) throw new IllegalArgumentException("빈 파일입니다.");
-        String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        String name = UUID.randomUUID().toString().replace("-", "");
-        String filename = (ext == null || ext.isBlank()) ? name : (name + "." + ext.toLowerCase());
-        Path target = uploadDir.resolve(filename);
-        try (InputStream in = file.getInputStream()) {
-            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException("파일 저장 실패", e);
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("빈 파일입니다.");
         }
-        return "/files/" + filename;
-    }
 
-    public Path resolveOnDisk(String filename){
-        return uploadDir.resolve(filename).normalize();
+        try {
+            Map uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "resource_type", "image"
+                            // 필요하면 폴더 설정도 가능:
+                            // "folder", "linku/profile"
+                    )
+            );
+
+            Object url = uploadResult.get("secure_url");
+            if (url == null) {
+                throw new RuntimeException("Cloudinary 응답에 secure_url이 없습니다.");
+            }
+
+            return url.toString(); // Cloudinary 절대 URL
+        } catch (Exception e) {
+            throw new RuntimeException("이미지 업로드 실패", e);
+        }
     }
 }
