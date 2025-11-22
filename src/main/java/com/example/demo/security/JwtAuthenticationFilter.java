@@ -1,10 +1,11 @@
-// src/main/java/com/example/demo/security/JwtAuthenticationFilter.java
 package com.example.demo.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpMethod;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,29 +28,62 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.jwtTokenProvider = jwtTokenProvider;
     }
 
+    /**
+     * 🔥 특정 요청은 JWT 필터가 아예 실행되지 않도록 스킵한다.
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+
+        String path = request.getServletPath();
+        String method = request.getMethod();
+
+        // 1) WebSocket(SockJS) 엔드포인트 → JWT 필터 적용 금지
+        if (path.startsWith("/ws")) {
+            return true;
+        }
+
+        // 2) CORS Preflight → JWT 검사 X
+        if (HttpMethod.OPTIONS.matches(method)) {
+            return true;
+        }
+
+        // 3) 인증/회원가입 API는 공개
+        if (path.startsWith("/api/auth/")) {
+            return true;
+        }
+
+        return false;  // 위 조건 제외하고는 기존 필터 로직 실행
+    }
+
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+
             try {
                 if (jwtTokenProvider.validateToken(token)) {
+
                     // JWT subject (userId / email 등)
                     String username = jwtTokenProvider.getUsername(token);
 
-                    // SecurityContext에 Authentication 저장
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                    username, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                                    username,
+                                    null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_USER"))
                             );
+
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
-                // 토큰이 잘못됐더라도 로그인 없이 계속 진행 (401은 EntryPoint에서 처리)
+                // 토큰이 잘못된 경우 인증 제거
                 SecurityContextHolder.clearContext();
             }
         }
