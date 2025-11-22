@@ -34,11 +34,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
 
-        String path = request.getServletPath();
+        // ✅ 여기서부터가 핵심
+        //   - getServletPath() 는 "" 가 나오는 경우가 많다.
+        //   - 실제로는 getRequestURI() 에 "/ws/info" 같은 전체 경로가 들어있음.
+        String uri = request.getRequestURI();
         String method = request.getMethod();
 
         // 1) WebSocket(SockJS) 엔드포인트 → JWT 필터 적용 금지
-        if (path.startsWith("/ws")) {
+        if (uri.startsWith("/ws")) {
             return true;
         }
 
@@ -48,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         // 3) 인증/회원가입 API는 공개
-        if (path.startsWith("/api/auth/")) {
+        if (uri.startsWith("/api/auth/")) {
             return true;
         }
 
