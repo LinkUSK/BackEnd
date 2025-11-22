@@ -20,7 +20,8 @@ public class CorsConfig {
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://localhost:5173",        // ▼ 추가
-                "http://127.0.0.1:5173"
+                "http://127.0.0.1:5173",
+                "https://link-u.netlify.app"
         ));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization","Content-Type","X-Requested-With"));
