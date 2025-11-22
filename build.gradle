@@ -20,11 +20,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    // ✅ H2 삭제
-    // runtimeOnly 'com.h2database:h2'
 
-    // ✅ MySQL 사용
+    // ✅ MySQL (로컬)
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // ✅ PostgreSQL (Render / 배포용)
+    runtimeOnly 'org.postgresql:postgresql:42.7.4'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
