@@ -12,14 +12,28 @@ import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 
+/**
+ * 🔹 STOMP(WebSocket) 기반 채팅 컨트롤러
+ *  - 클라이언트가 /app/chat.send 로 메시지를 보내면
+ *  - 메시지를 저장한 뒤 /topic/chat.room.{roomId} 로 브로드캐스트
+ */
 @Controller
 @RequiredArgsConstructor
 public class ChatStompController {
 
-    private final SimpMessagingTemplate template;
-    private final ChatService chatService;
+    private final SimpMessagingTemplate template; // 구독 중인 클라이언트에게 메시지 전송용
+    private final ChatService chatService;        // DB 저장/비즈니스 로직
     private final UserRepository userRepository;
 
+    /**
+     * 💬 채팅 메시지 전송 엔드포인트
+     * - 프론트: STOMP client 로 /app/chat.send 에 ChatMessageDto 전송
+     * - 서버:
+     *    1) STOMP Principal 에서 보낸 사람 식별
+     *    2) roomId/receiverId 검증
+     *    3) DB에 저장
+     *    4) 해당 방을 구독 중인 모든 사용자에게 브로드캐스트
+     */
     @MessageMapping("/chat.send")
     public void send(@Payload ChatMessageDto incoming, Principal principal) {
         if (principal == null) {
@@ -55,10 +69,14 @@ public class ChatStompController {
                 saved.getCreatedAt().toString()
         );
 
+        // 같은 roomId 를 구독 중인 클라이언트에게 전송
         template.convertAndSend("/topic/chat.room." + saved.getRoomId(), outgoing);
     }
 
-    /** STOMP Principal 이름을 DB의 User.id(Long) 로 변환 */
+    /**
+     * STOMP Principal 이름을 DB의 User.id(Long) 로 변환
+     * - JWT 설정에 따라 Principal 에 숫자 또는 userId 문자열이 들어올 수 있어 두 경우를 모두 지원
+     */
     private Long resolveUserId(String principalName) {
         // 1) 먼저 숫자로 시도 (DB id로 넣은 경우)
         Long id = tryParseLong(principalName);
